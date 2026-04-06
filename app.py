@@ -1,5 +1,5 @@
 import os
-from openai import OpenAI
+from google import genai
 
 SYSTEM_PROMPT = """
 You are an assistant that summarizes meeting notes into:
@@ -8,6 +8,8 @@ You are an assistant that summarizes meeting notes into:
 
 If the notes are unclear, do not invent details.
 If owners or deadlines are uncertain, say they are unclear.
+Only include action items that are assigned tasks or clear next steps.
+Do not turn general decisions into action items unless they require explicit follow-up.
 """
 
 MEETING_NOTES = """
@@ -19,22 +21,27 @@ The manager asked everyone to send final feedback by Tuesday.
 """
 
 def main():
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        print("Error: OPENAI_API_KEY is not set.")
+        print("Error: GEMINI_API_KEY is not set.")
         return
 
-    client = OpenAI(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
-    response = client.responses.create(
-        model="gpt-4.1-mini",
-        input=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Please summarize these meeting notes:\n\n{MEETING_NOTES}"}
-        ],
+    prompt = f"""
+System instruction:
+{SYSTEM_PROMPT}
+
+User input:
+Please summarize these meeting notes:
+
+{MEETING_NOTES}
+"""
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
     )
-
-    output_text = response.output_text
 
     print("\n=== SYSTEM PROMPT ===")
     print(SYSTEM_PROMPT.strip())
@@ -43,7 +50,7 @@ def main():
     print(MEETING_NOTES.strip())
 
     print("\n=== MODEL OUTPUT ===")
-    print(output_text.strip())
+    print(response.text.strip())
 
 if __name__ == "__main__":
     main()
